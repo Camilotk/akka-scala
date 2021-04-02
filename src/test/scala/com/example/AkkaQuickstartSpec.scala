@@ -2,21 +2,22 @@
 package com.example
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
-import com.example.Greeter.Greet
-import com.example.Greeter.Greeted
+import MovementProcessor.Movement
+import GameMapActor.GameMap
 import org.scalatest.wordspec.AnyWordSpecLike
 
 //#definition
 class AkkaQuickstartSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 //#definition
 
-  "A Greeter" must {
+  "A Movement" must {
     //#test
-    "reply to greeted" in {
-      val replyProbe = createTestProbe[Greeted]()
-      val underTest = spawn(Greeter())
-      underTest ! Greet("Santa", replyProbe.ref)
-      replyProbe.expectMessage(Greeted("Santa", underTest.ref))
+    "move the character to a place" in {
+      val replyProbe = createTestProbe[GameMap]()
+      val underTest = spawn(MovementProcessor())
+      underTest ! Movement("eduardo schenato", (9, -40), 'y', -4)
+      val actionsRef = spawn(CharacterAction(), "acoes")
+      replyProbe.expectMessage(GameMap("eduardo schenato", (9, -44), actionsRef))
     }
     //#test
   }
