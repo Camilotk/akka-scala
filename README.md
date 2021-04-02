@@ -105,7 +105,9 @@ object MovementProcessor {
 ```
 
 **Ex 3: Chamadas**
+
 Um ator pode enviar mensagem para outro usando um dos operadores de mensagem.
+
 ```scala
 object GameMapActor {
   final case class GameMap(character: String, location: (Int, Int))
@@ -163,5 +165,84 @@ object MovementProcessor {
                 Behaviors.same
             }
         }
+}
+```
+
+**Ex 4: replyTo**
+
+É aconselhavel passar o ator que tem que ser chamado pelo parametro replyTo do ator.
+
+```scala
+object CharacterAction {
+  final case class Action(character: String, place: String, doing: Boolean)
+
+  def apply(): Behavior[Action] = Behaviors.receive {
+    (context, message) =>
+        message.place match {
+          case "Sala de Aula" => {
+            if(message.doing) {
+              println(f"O personagem ${message.character} está ministrando aula!")
+            } else {
+              println(f"O personagem ${message.character} está esperando a aula começar!")
+            }
+          }
+          case _ => println(f"O personagem ${message.character} está comtemplando a paisagem")
+      }
+      Behaviors.same
+  }
+}
+
+object GameMapActor {
+    // adicionamos o param replyTo
+  final case class GameMap(character: String, location: (Int, Int), replyTo: ActorRef[Action])
+
+  def apply(): Behavior[GameMap] = Behaviors.receive {
+    val locations = Map(
+      (31, 12) -> "Sala de Aula",
+      (9, -44) -> "Sala dos Professores"
+    )
+    (context, message) =>
+      if (locations.contains(message.location)) {
+        val characterLocation = locations collect { case (message.location, place) => place }
+        println(f"O personagem ${message.character} está em ${characterLocation.head}")
+
+        // Envia a mensagem para o ator de replyTo
+        message.replyTo ! Action(message.character, characterLocation.head, true)
+      }
+
+      Behaviors.same
+  }
+}
+
+object MovementProcessor {
+  final case class Movement(character: String, location: (Int, Int), axis: Char, distance: Int)
+
+  def apply(): Behavior[Movement] = Behaviors.setup {
+    context => 
+      val gameMapRef = context.spawn(GameMapActor(), "mapa")
+      // declaramos um Actor de actions como Ref
+      val actionsRef = context.spawn(CharacterAction(), "acoes")
+
+      Behaviors.receiveMessage {
+        message =>
+          var position: (Int, Int) = (0, 0)
+          message.axis match {
+            case 'x' => {
+              position = (message.location._1 + message.distance, message.location._2)
+              println(f"O personagem ${message.character} moveu ${message.distance} no eixo x e está em $position")
+            }
+            case 'y' => {
+              position = (message.location._1, message.location._2 + message.distance)
+              println(f"O personagem ${message.character} moveu ${message.distance} no eixo y e está em $position")
+            }
+            case _ => println("Erro")
+          }
+
+            // passamos o param reply com actionsRef
+          gameMapRef ! GameMap(message.character, position, actionsRef)
+
+          Behaviors.same
+      }
+  }
 }
 ```
