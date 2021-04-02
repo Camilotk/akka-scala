@@ -103,3 +103,65 @@ object MovementProcessor {
     }
 }
 ```
+
+**Ex 3: Chamadas**
+Um ator pode enviar mensagem para outro usando um dos operadores de mensagem.
+```scala
+object GameMapActor {
+  final case class GameMap(character: String, location: (Int, Int))
+
+  def apply(): Behavior[GameMap] = Behaviors.receive {
+
+    val locations = Map(
+        (31, 12) -> "Sala de Aula",
+        (9, -44) -> "Sala dos Professores"
+    )
+
+    (context, message) =>
+        // caso o lugar passado na mensagem exista
+        if (locations.contains(message.location)) {
+            // capture o nome do local do objeto locations
+            val characterLocation = locations collect { case (message.location, place) => place }
+            // imprima que o personagem está lá
+            println(f"O personagem ${message.character} está em ${characterLocation.head}")
+        }
+
+    Behaviors.same
+  }
+}
+
+object MovementProcessor {
+  final case class Movement(character: String, location: (Int, Int), axis: Char, distance: Int)
+
+  def apply(): Behavior[Movement] = Behaviors.setup {
+    context =>
+        // Declara um GameMapActor
+        val gameMapRef = context.spawn(GameMapActor(), "mapa")
+
+        // Recebe uma mensagem
+        Behaviors.receiveMessage {
+            message =>
+                var position: (Int, Int) = (0, 0)
+                // pattern match a posição do personagem
+                message.axis match {
+                    case 'x' => {
+                        // aplica o movimento
+                        position = (message.location._1 + message.distance, message.location._2)
+                        // mostra no console
+                        println(f"O personagem ${message.character} moveu ${message.distance} no eixo x e está em $position")
+                    }
+                    case 'y' => {
+                        position = (message.location._1, message.location._2 + message.distance)
+                        println(f"O personagem ${message.character} moveu ${message.distance} no eixo y e está em $position")
+                    }
+                    case _ => println("Erro")
+                }
+
+                // Envia a mensagem para o outro ator
+                gameMapRef ! GameMap(message.character, position)
+
+                Behaviors.same
+            }
+        }
+}
+```
