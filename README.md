@@ -47,9 +47,59 @@ object AkkaQuickstart extends App {
 }
 ```
 ```
-*Obs*: Em Scala mensagens são enviadas por atores usando um dos seguintes métodos:
+Obs: Em Scala mensagens são enviadas por atores usando um dos seguintes métodos:
 
-    ! significa “fire-and-forget”, e.g. envia a mensagem assíncrona e retorna imediatamente. Também conhecido como tell.
+    ! significa “fire-and-forget”, e.g. envia a mensagem assíncrona e retorna imediatamente. 
+    Também conhecido como tell.
 
-    ? envia a mensagem de forma assíncrona e recebe um Future para uma computação futura. Também conhecido como ask.
+    ? envia a mensagem de forma assíncrona e recebe um Future para uma computação futura. 
+    Também conhecido como ask.
+```
+
+**Ex 2: Opções**
+
+É importante conhecer algumas diferenças como por exemplo entre Behavior.recieveMesage e Behavior.recieve, a primeira recebe apenas a mensagem, enquanto a segunda recebe o objeto context que contêm informações adicionais e a mensagem.
+
+```scala
+object GameMapActor {
+    final case class GameMap(character: String, location: (Int, Int))
+
+    // aqui temos .recieve ao invés de .recieveMessage
+    def apply(): Behavior[GameMap] = Behaviors.receive {
+        // que nos traz o objeto context 
+        // juntamente com a mensagem
+        (context, message) =>
+            // o context além de mais informações contem
+            // métodos como log que podem ser usados para
+            // logar no console mensagens
+            context.log.info(message)
+
+        Behaviors.same
+    }
+}
+```
+
+Quando queremos que o Behavior tenha mais informações e ações do receber ou enviar uma mensagem usamos o método .setup de Bahaviors que nos permite declarar os listeners de enviar e receber mensagem dentro.
+
+```scala
+object MovementProcessor {
+  final case class Movement(character: String, location: (Int, Int))
+
+    // aqui usamos o método setup para adicionar 
+    // informações e comportamentos no ator
+    def apply(): Behavior[Movement] = Behaviors.setup {
+        // setup recebe context
+        context =>
+            // add greeting
+            val greeting: String = "Olá"
+
+            // aqui declaramos recieveMessage normalmente
+            Behaviors.receiveMessage {
+                message =>
+                    println(f"$greeting ${message.character}")
+
+                    Behaviors.same
+            }
+    }
+}
 ```
